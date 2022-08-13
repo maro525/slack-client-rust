@@ -8,23 +8,22 @@
     TextInput,
     Loading,
   } from "carbon-components-svelte";
-  import ChevronRight from "carbon-icons-svelte/lib/ChevronRight.svelte";
 
-  import { invoke } from "@tauri-apps/api/tauri";
+  import type { Message } from "~/model/messages";
+  import MessageCard from "./components/molecules/MessageCard.svelte";
 
-  import type { Message, Response } from "~/model/search-messages";
+  import { search, hello } from "~/service/tauri";
 
   let messagesPromise: Promise<Message[]> = Promise.resolve([]);
   let query = "";
 
   const handleClickUpdate = () => {
-    console.log("handle click");
-    messagesPromise = invoke<Response>("search_messages", { query }).then(
-      (r) => {
-        console.log(r);
-        return r.messages;
-      }
-    );
+    messagesPromise = search(query).catch((err) => console.log(err));
+  };
+
+  const callHello = async () => {
+    const res = await hello();
+    console.log(res);
   };
 </script>
 
@@ -32,17 +31,18 @@
   <OrderedList>
     <TextInput labelText="Search" bind:value={query} />
     <Button on:click={handleClickUpdate}>Search</Button>
+    <Button on:click={callHello}>hello</Button>
     {#await messagesPromise}
       <Loading />
     {:then messages}
       {#each messages as message}
         <ListItem>
-          <ChevronRight /> <span>{message}</span>
+          <MessageCard {message} />
         </ListItem>
       {/each}
     {:catch error}
       <ListItem>
-        <p>{error}</p>
+        <p style="color: red">{error}</p>
       </ListItem>
     {/await}
   </OrderedList>

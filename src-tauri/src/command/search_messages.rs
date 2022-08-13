@@ -1,63 +1,45 @@
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 
-use bson::DateTime;
+use serde::{Deserialize, Serialize};
 
 use crate::service::slack;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Response {
-    messages: Vec<Message>,
+pub struct CommandResponse {
+    messages: Vec<SlackMessage>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Message {
-    id: String,
-    user_id: String,
+struct SlackMessage {
     user_name: String,
     channel_name: String,
     text: String,
-    permalink: String,
-    created_at: bson::DateTime,
 }
 
-impl From<&slack::search_messages::Message> for Message {
-    fn from(m: &slack::search_messages::Message) -> Self {
-        let sec = m.ts.split('.').collect::<Vec<_>>()[0];
-        let sec = sec.parse::<i64>().unwrap();
-
-        Message {
-            id: m.iid.clone(),
-            user_id: m.user.clone(),
+impl From<&slack::message::Message> for SlackMessage {
+    fn from(m: &slack::message::Message) -> Self {
+        SlackMessage {
             user_name: m.username.clone(),
             channel_name: m.channel.name.clone(),
             text: m.text.clone(),
-            permalink: m.permalink.clone(),
-            created_at: DateTime::now(),
         }
     }
 }
 
-pub async fn exec(query: String) -> Result<Response> {
+pub async fn exec(query: String) -> Result<CommandResponse> {
     // let token = std::env::var("SLACK_USER_TOKEN").expect("SLACK_USER_TOKEN is not set.");
 
-    let token: &str = "xoxp-8734147719-171770099568-3873404412051-87d3225ac7b4ddf98165c96027dad5ad";
+    let token: &str = "xoxp-8734147719-171770099568-3936479728738-8946eb1d69b2f496dba0bafa09d56d70";
 
-    println!("query {}", query);
+    let client = slack::SlackClient::new(token);
 
-    let res = slack::SlackClient::new(token)
-        .search_message(query.as_str(), "timestamp")
-        .await?;
+    let res = client.search_message(query.as_str(), "timestamp").await?;
 
-    println!("res {:?}", res);
+    let messages = res.messages.matches;
 
-    let messages = res
-        .messages
-        .matches
-        .iter()
-        .map(|m| m.into())
-        .collect::<Vec<_>>();
+    let messages = messages.iter().map(|m| m.into()).collect::<Vec<_>>();
 
-    println!("messages {:?}", messages);
-    Ok(Response { messages })
+    println!("{:?}", messages);
+
+    Ok(CommandResponse { messages })
 }

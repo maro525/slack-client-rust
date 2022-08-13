@@ -27,7 +27,7 @@ struct Pagination {
 pub struct Message {
     pub iid: String,
     pub score: f64,
-    pub user: String,
+    pub user: Option<String>,
     pub username: String,
     pub ts: String,
     pub channel: Channel,
